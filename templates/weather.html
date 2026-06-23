@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/weather.css">
+{% endblock %}
+
+{% block body_class %}weather-theme weather-{{ weather.theme }}{% endblock %}
+
+{% block content %}
+<main class="weather-page">
+    <section class="weather-hero">
+        <div>
+            <p class="label">&#22825;&#27671;&#20104;&#22577;API&#65288;livedoor&#22825;&#27671;&#20114;&#25563;&#65289;</p>
+            <h1>{{ weather.area_name or "&#22825;&#27671;" }}</h1>
+            <p class="weather-updated">{{ weather.publishing_office }} / {{ weather.report_datetime }}</p>
+        </div>
+
+        <div class="weather-now">
+            {% if weather.today and weather.today[0].icon %}
+            <img class="weather-icon-img" src="{{ weather.today[0].icon }}" alt="{{ weather.today[0].label }}">
+            {% else %}
+            <span class="weather-icon">{% if weather.theme == "sunny" %}&#9728;{% elif weather.theme == "rain" %}&#9730;{% elif weather.theme == "snow" %}&#10052;{% else %}&#9729;{% endif %}</span>
+            {% endif %}
+            <strong>
+                {% if weather.today and weather.today[0].weather %}
+                    {{ weather.today[0].weather }}
+                {% else %}
+                    &#21462;&#24471;&#20013;
+                {% endif %}
+            </strong>
+        </div>
+    </section>
+
+    {% if weather.error %}
+    <section class="weather-card">
+        <h2>&#22825;&#27671;&#12434;&#21462;&#24471;&#12391;&#12365;&#12414;&#12379;&#12435;&#12391;&#12375;&#12383;</h2>
+        <p>{{ weather.error }}</p>
+    </section>
+    {% else %}
+    <section class="weather-stack">
+        <article class="weather-card today-card">
+            <h2>&#20170;&#26085;</h2>
+            {% if weather.hourly %}
+            <div class="hourly-weather-list">
+                {% for hour in weather.hourly %}
+                <div class="hourly-weather-item">
+                    <strong>{{ hour.time }}</strong>
+                    <span class="hourly-label">{{ hour.label }}</span>
+                    <small>&#38477;&#27700; {{ hour["pop"] if hour["pop"] != "" else "-" }}%</small>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="weather-empty">&#26178;&#38291;&#12372;&#12392;&#12398;&#22825;&#27671;&#12434;&#21462;&#24471;&#12391;&#12365;&#12414;&#12379;&#12435;&#12391;&#12375;&#12383;</p>
+            {% endif %}
+        </article>
+
+        <article class="weather-card week-card">
+            <h2>3&#26085;&#38291;&#12398;&#22825;&#27671;</h2>
+            <div class="week-weather-list">
+                {% for day in weather.week %}
+                <div class="week-weather-item weather-code-{{ day.weather_code }}">
+                    <strong>{{ day.date[5:] }}</strong>
+                    {% if day.icon %}
+                    <img class="week-icon-img" src="{{ day.icon }}" alt="{{ day.label }}">
+                    {% else %}
+                    <span class="week-icon">&#9729;</span>
+                    {% endif %}
+                    <small>{{ day.label }}</small>
+                    <span>
+                        {% if day.temp_min or day.temp_max %}
+                            {{ day.temp_min or "-" }} / {{ day.temp_max or "-" }}&#8451;
+                        {% else %}
+                            -- / --&#8451;
+                        {% endif %}
+                    </span>
+                    <small>
+                        {% if day["pop"] %}&#38477;&#27700; {{ day["pop"] }}%{% else %}&nbsp;{% endif %}
+                        {% if day["reliability"] %} / {{ day["reliability"] }}{% endif %}
+                    </small>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}

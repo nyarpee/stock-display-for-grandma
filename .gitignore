@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual Environment
+.venv/
+venv/
+
+# VSCode
+.vscode/
+
+# Environment Variables
+.env
+
+# Logs
+*.log
+
+# Python Cache
+.pytest_cache/
+.mypy_cache/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VirtualBox
+.vagrant/
+
+# Local data cache
+data/cache/
+
+# Agents
+.agents/

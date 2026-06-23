@@ -1,0 +1,36 @@
+<div class="stock-tile" onclick="openDetail('{{ stock.code }}')">
+    <div class="tile-top">
+        <span class="rank">#{{ rank }}</span>
+        <span class="code">{{ stock.code }}</span>
+    </div>
+
+    <div class="name">{{ stock.name }}</div>
+
+    <div class="tile-bottom">
+        <div>
+            <p class="small">
+                {% if ranking == "dividend" %}
+                    &#37197;&#24403;&#21033;&#22238;&#12426;
+                {% else %}
+                    &#29694;&#22312;&#20516;
+                {% endif %}
+            </p>
+
+            <p class="price">
+                {% if ranking == "dividend" %}
+                    {{ stock.dividend_yield }}
+                {% else %}
+                    {{ stock.price }}&#20870;
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="change">
+            {% if ranking == "dividend" %}
+                {{ stock.price }}&#20870;
+            {% else %}
+                {{ stock.change }}
+            {% endif %}
+        </div>
+    </div>
+</div>
