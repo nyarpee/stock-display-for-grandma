@@ -31,7 +31,7 @@ def init_favorites_db():
 
 
 def normalize_favorite(stock):
-    code = str(stock.get("code") or "").strip()
+    code = str(stock.get("code") or "").strip().upper()
     name = str(stock.get("name") or code).strip()
 
     return {
@@ -97,4 +97,4 @@ def delete_favorite(code):
     init_favorites_db()
 
     with get_connection() as connection:
-        connection.execute("DELETE FROM favorites WHERE code = ?", (str(code).strip(),))
+        connection.execute("DELETE FROM favorites WHERE code = ?", (str(code).strip().upper(),))

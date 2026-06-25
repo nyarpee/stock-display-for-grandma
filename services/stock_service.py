@@ -1,8 +1,10 @@
 import time
 from datetime import datetime
+from pathlib import Path
 
 import requests
 import yfinance as yf
+from yfinance import cache as yf_cache
 from bs4 import BeautifulSoup
 
 from profile import get_company_profile
@@ -11,8 +13,16 @@ from utils.cache import TimedCache
 from utils.formatters import safe_dict, safe_get, safe_number, safe_series
 
 
+YFINANCE_CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "yfinance-cache"
+YFINANCE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+yf_cache.set_cache_location(str(YFINANCE_CACHE_DIR))
+
 stock_cache = TimedCache()
 stock_card_cache = TimedCache()
+
+
+def normalize_stock_code(code):
+    return str(code or "").strip().upper()
 
 
 def calculate_dividend_yield(dividend_rate, current_price):
@@ -41,6 +51,8 @@ def format_date_value(value):
 
 
 def get_japanese_stock_name(code):
+    code = normalize_stock_code(code)
+
     try:
         url = f"https://finance.yahoo.co.jp/quote/{code}.T"
         response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6)
@@ -50,6 +62,7 @@ def get_japanese_stock_name(code):
 
         if title:
             name = title.get_text(" ", strip=True).replace(f"({code}.T)", "").strip()
+            name = name.replace("の株価・株式情報", "").strip()
             if name:
                 return name
     except Exception:
@@ -59,6 +72,7 @@ def get_japanese_stock_name(code):
 
 
 def get_stock_card(code):
+    code = normalize_stock_code(code)
     now = time.time()
     cached = stock_card_cache.get(code, now)
 
@@ -83,11 +97,10 @@ def get_stock_card(code):
     name = get_japanese_stock_name(code) or info.get("longName") or info.get("shortName") or code
     change = ""
 
-    if price_change is not None:
+    if price_change_percent is not None:
+        change = f"{price_change_percent:+.2f}%"
+    elif price_change is not None:
         change = f"{price_change:+,.0f}円"
-
-        if price_change_percent is not None:
-            change = f"{change} / {price_change_percent:+.2f}%"
 
     data = {
         "name": name,
@@ -103,6 +116,7 @@ def get_stock_card(code):
 
 
 def get_stock_detail(code):
+    code = normalize_stock_code(code)
     now = time.time()
     cached = stock_cache.get(code, now)
 

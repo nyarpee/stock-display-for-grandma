@@ -16,6 +16,12 @@
                 &#37528;&#26564;&#12467;&#12540;&#12489;&#26908;&#32034;
             {% elif ranking == "favorites" %}
                 &#12362;&#27671;&#12395;&#20837;&#12426;
+            {% elif ranking == "attention" %}
+                &#27880;&#30446;&#26666;
+            {% elif ranking == "marketcap" %}
+                &#26178;&#20385;&#32207;&#38989;&#12521;&#12531;&#12461;&#12531;&#12464;
+            {% elif ranking == "down" %}
+                &#20170;&#26085;&#19979;&#12364;&#12387;&#12390;&#12356;&#12427;&#26666;
             {% elif ranking == "dividend" %}
                 &#37197;&#24403;&#21033;&#22238;&#12426;&#12521;&#12531;&#12461;&#12531;&#12464;
             {% else %}
@@ -26,6 +32,18 @@
         <div class="ranking-tabs">
             <a class="ranking-tab {% if ranking == 'up' %}active{% endif %}" href="/?ranking=up">
                 &#20516;&#19978;&#12364;&#12426;
+            </a>
+
+            <a class="ranking-tab {% if ranking == 'down' %}active{% endif %}" href="/?ranking=down">
+                &#20516;&#19979;&#12364;&#12426;
+            </a>
+
+            <a class="ranking-tab {% if ranking == 'attention' %}active{% endif %}" href="/?ranking=attention">
+                &#27880;&#30446;&#26666;
+            </a>
+
+            <a class="ranking-tab {% if ranking == 'marketcap' %}active{% endif %}" href="/?ranking=marketcap">
+                &#26178;&#20385;&#32207;&#38989;
             </a>
 
             <a class="ranking-tab {% if ranking == 'dividend' %}active{% endif %}" href="/?ranking=dividend">
@@ -53,21 +71,24 @@
     <section class="search-pad" aria-label="&#37528;&#26564;&#12467;&#12540;&#12489;&#20837;&#21147;">
         <p class="search-label">&#37528;&#26564;&#12467;&#12540;&#12489;&#12434;&#20837;&#21147;</p>
         <div class="code-display" id="code-display">----</div>
-        <div class="numpad">
+        <div class="code-keypad">
             {% for number in [1,2,3,4,5,6,7,8,9] %}
-                <button type="button" onclick="pressCodeNumber('{{ number }}')">{{ number }}</button>
+                <button type="button" class="code-key" onclick="pressCodeNumber('{{ number }}')">{{ number }}</button>
             {% endfor %}
-            <button type="button" class="numpad-sub" onclick="deleteCodeNumber()">&#28040;&#12377;</button>
-            <button type="button" onclick="pressCodeNumber('0')">0</button>
-            <button type="button" class="numpad-open" onclick="openSearchedStock()">&#38283;&#12367;</button>
+            <button type="button" class="code-key" onclick="pressCodeNumber('0')">0</button>
+            {% for letter in ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"] %}
+                <button type="button" class="code-key code-key-letter" onclick="pressCodeLetter('{{ letter }}')">{{ letter }}</button>
+            {% endfor %}
+            <button type="button" class="code-key code-key-action code-key-delete" onclick="deleteCodeNumber()">&#28040;&#12377;</button>
+            <button type="button" class="code-key code-key-action code-key-open" onclick="openSearchedStock()">&#38283;&#12367;</button>
         </div>
     </section>
 
     <section class="search-result-panel">
         <p class="search-label">&#26908;&#32034;&#32080;&#26524;</p>
         <div class="search-result-card" id="search-result-card">
-            <p class="search-empty-main">4&#12369;&#12383;&#12398;&#30058;&#21495;&#12434;&#20837;&#21147;</p>
-            <p class="search-empty-sub">7203&#12394;&#12393;&#12398;&#37528;&#26564;&#12467;&#12540;&#12489;&#12391;&#35443;&#32048;&#12434;&#38283;&#12369;&#12414;&#12377;</p>
+            <p class="search-empty-main">4&#12369;&#12383;&#12398;&#37528;&#26564;&#12467;&#12540;&#12489;&#12434;&#20837;&#21147;</p>
+            <p class="search-empty-sub">7203&#12420;285A&#12394;&#12393;&#12391;&#26908;&#32034;&#12391;&#12365;&#12414;&#12377;</p>
         </div>
     </section>
 </main>
@@ -85,6 +106,12 @@
             <span class="load-more-sub">
                 {% if ranking == "dividend" %}
                     &#37197;&#24403;&#21033;&#22238;&#12426;&#12521;&#12531;&#12461;&#12531;&#12464;&#12398;&#32154;&#12365;&#12434;&#35211;&#12427;
+                {% elif ranking == "attention" %}
+                    Yahoo!&#12501;&#12449;&#12452;&#12490;&#12531;&#12473;&#12398;&#27880;&#30446;&#26666;&#12398;&#32154;&#12365;&#12434;&#35211;&#12427;
+                {% elif ranking == "marketcap" %}
+                    &#26178;&#20385;&#32207;&#38989;&#12364;&#22823;&#12365;&#12356;&#26666;&#12398;&#32154;&#12365;&#12434;&#35211;&#12427;
+                {% elif ranking == "down" %}
+                    &#20516;&#19979;&#12364;&#12426;&#12521;&#12531;&#12461;&#12531;&#12464;&#12398;&#32154;&#12365;&#12434;&#35211;&#12427;
                 {% elif ranking == "favorites" %}
                     &#26143;&#12434;&#25276;&#12375;&#12383;&#26666;&#12364;&#12371;&#12371;&#12395;&#34920;&#31034;&#12373;&#12428;&#12414;&#12377;
                 {% else %}

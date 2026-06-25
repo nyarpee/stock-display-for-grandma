@@ -14,7 +14,10 @@ let endIdleTimer = null;
 const END_IDLE_RESET_MS = 30 * 1000;
 const rankingPages = {
     up: 1,
+    down: 1,
     dividend: 1,
+    attention: 1,
+    marketcap: 1,
     favorites: 1,
 };
 
@@ -246,10 +249,7 @@ async function loadMoreStocks() {
 
         rankingPages[ranking] = nextPage;
         loadMoreTile.querySelector(".load-more-main").textContent = "\u3055\u3089\u306b10\u4ef6";
-        loadMoreTile.querySelector(".load-more-sub").textContent =
-            ranking === "dividend"
-                ? "\u914d\u5f53\u5229\u56de\u308a\u30e9\u30f3\u30ad\u30f3\u30b0\u306e\u7d9a\u304d\u3092\u898b\u308b"
-                : "\u5024\u4e0a\u304c\u308a\u30e9\u30f3\u30ad\u30f3\u30b0\u306e\u7d9a\u304d\u3092\u898b\u308b";
+        loadMoreTile.querySelector(".load-more-sub").textContent = getLoadMoreText(ranking);
     } catch (error) {
         loadMoreTile.querySelector(".load-more-main").textContent = "\u3082\u3046\u4e00\u5ea6\u898b\u308b";
         loadMoreTile.querySelector(".load-more-sub").textContent = error.message;
@@ -264,6 +264,27 @@ async function loadMoreStocks() {
         clampPosition();
         renderTicker();
     }
+}
+
+
+function getLoadMoreText(ranking) {
+    if (ranking === "dividend") {
+        return "\u914d\u5f53\u5229\u56de\u308a\u30e9\u30f3\u30ad\u30f3\u30b0\u306e\u7d9a\u304d\u3092\u898b\u308b";
+    }
+
+    if (ranking === "attention") {
+        return "Yahoo!\u30d5\u30a1\u30a4\u30ca\u30f3\u30b9\u306e\u6ce8\u76ee\u682a\u306e\u7d9a\u304d\u3092\u898b\u308b";
+    }
+
+    if (ranking === "marketcap") {
+        return "\u6642\u4fa1\u7dcf\u984d\u304c\u5927\u304d\u3044\u682a\u306e\u7d9a\u304d\u3092\u898b\u308b";
+    }
+
+    if (ranking === "down") {
+        return "\u5024\u4e0b\u304c\u308a\u30e9\u30f3\u30ad\u30f3\u30b0\u306e\u7d9a\u304d\u3092\u898b\u308b";
+    }
+
+    return "\u5024\u4e0a\u304c\u308a\u30e9\u30f3\u30ad\u30f3\u30b0\u306e\u7d9a\u304d\u3092\u898b\u308b";
 }
 
 
@@ -296,15 +317,31 @@ function createStockTile(stock, rankNumber, ranking) {
     tile.dataset.dividendYield = stock.dividend_yield || "";
     tile.onclick = () => openDetail(stock.code, stock.name, stock.dividend_yield);
 
-    const mainLabel = ranking === "dividend" ? "\u914d\u5f53\u5229\u56de\u308a" : "\u73fe\u5728\u5024";
-    const mainValue = ranking === "dividend"
+    const mainLabel = ranking === "favorites"
+        ? "\u524d\u65e5\u6bd4"
+        : ranking === "dividend"
+        ? "\u914d\u5f53\u5229\u56de\u308a"
+        : ranking === "marketcap"
+            ? "\u6642\u4fa1\u7dcf\u984d"
+            : "\u73fe\u5728\u5024";
+    const mainValue = ranking === "favorites"
+        ? stock.change || "\u524d\u65e5\u6bd4\u4e0d\u660e"
+        : ranking === "dividend"
         ? stock.dividend_yield
-        : stock.price
+        : ranking === "marketcap"
+            ? stock.market_cap_text
+            : stock.price
+                ? `${stock.price}\u5186`
+                : "\u4e0d\u660e";
+    const sideValue = ranking === "favorites"
+        ? (stock.price ? `${stock.price}\u5186` : "")
+        : ranking === "dividend" || ranking === "marketcap"
             ? `${stock.price}\u5186`
-            : "\u4e0d\u660e";
-    const sideValue = ranking === "dividend" ? `${stock.price}\u5186` : stock.change;
+            : stock.change;
     const rankText = ranking === "favorites" ? "\u2605" : ranking === "search" ? "\u691c\u7d22" : `#${rankNumber}`;
-    const changeClass = String(sideValue || "").trim().startsWith("-") ? "down-text" : "up-text";
+    const colorSource = ranking === "favorites" ? mainValue : sideValue;
+    const changeClass = String(colorSource || "").trim().startsWith("-") ? "down-text" : "up-text";
+    const mainValueClass = ranking === "favorites" ? changeClass : "";
 
     tile.innerHTML = `
         <div class="tile-top">
@@ -318,7 +355,7 @@ function createStockTile(stock, rankNumber, ranking) {
         <div class="tile-bottom">
             <div>
                 <p class="small">${mainLabel}</p>
-                <p class="price">${escapeHtml(mainValue)}</p>
+                <p class="price ${mainValueClass}">${escapeHtml(mainValue)}</p>
             </div>
             <div class="change ${changeClass}">${escapeHtml(sideValue)}</div>
         </div>

@@ -20,6 +20,8 @@
             <p class="small">
                 {% if ranking == "dividend" %}
                     &#37197;&#24403;&#21033;&#22238;&#12426;
+                {% elif ranking == "marketcap" %}
+                    &#26178;&#20385;&#32207;&#38989;
                 {% else %}
                     &#29694;&#22312;&#20516;
                 {% endif %}
@@ -28,6 +30,8 @@
             <p class="price">
                 {% if ranking == "dividend" %}
                     {{ stock.dividend_yield }}
+                {% elif ranking == "marketcap" %}
+                    {{ stock.market_cap_text }}
                 {% else %}
                     {{ stock.price }}&#20870;
                 {% endif %}
@@ -36,6 +40,8 @@
 
         <div class="change {% if stock.change and stock.change|string|trim|first == '-' %}down-text{% else %}up-text{% endif %}">
             {% if ranking == "dividend" %}
+                {{ stock.price }}&#20870;
+            {% elif ranking == "marketcap" %}
                 {{ stock.price }}&#20870;
             {% else %}
                 {{ stock.change }}

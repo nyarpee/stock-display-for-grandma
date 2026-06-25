@@ -4,12 +4,19 @@ let favoriteStocks = [];
 let favoritesReady = null;
 
 
+function normalizePreviousDayChange(change) {
+    const text = String(change ?? "").trim();
+    const percentMatch = text.match(/[+-]?\d+(?:\.\d+)?%/);
+    return percentMatch ? percentMatch[0] : text;
+}
+
+
 function normalizeFavoriteStock(stock) {
     return {
-        code: String(stock?.code || "").trim(),
+        code: String(stock?.code || "").trim().toUpperCase(),
         name: String(stock?.name || stock?.code || "").trim(),
         price: String(stock?.price ?? "").trim(),
-        change: String(stock?.change ?? "").trim(),
+        change: normalizePreviousDayChange(stock?.change),
         dividend_yield: String(stock?.dividend_yield ?? stock?.dividendYield ?? "").trim(),
     };
 }
@@ -202,6 +209,45 @@ function setFavoritesEmptyTile(loadMoreTile, hasFavorites) {
 }
 
 
+async function fetchFreshFavoriteCard(stock) {
+    const favorite = normalizeFavoriteStock(stock);
+
+    if (!favorite.code) {
+        return favorite;
+    }
+
+    try {
+        const response = await fetch(`/api/stock-card/${encodeURIComponent(favorite.code)}`);
+
+        if (!response.ok) {
+            throw new Error();
+        }
+
+        const latestStock = normalizeFavoriteStock(await response.json());
+        const mergedStock = normalizeFavoriteStock({
+            ...favorite,
+            ...latestStock,
+            name: latestStock.name || favorite.name,
+        });
+
+        await saveFavoriteToServer(mergedStock);
+        return mergedStock;
+    } catch (_) {
+        return favorite;
+    }
+}
+
+
+async function refreshFavoriteCards() {
+    if (favoriteStocks.length === 0) {
+        return favoriteStocks;
+    }
+
+    favoriteStocks = await Promise.all(favoriteStocks.map(stock => fetchFreshFavoriteCard(stock)));
+    return favoriteStocks;
+}
+
+
 async function renderFavoritesPage() {
     if (getCurrentRanking() !== "favorites" || !tickerTrack) {
         return;
@@ -211,8 +257,10 @@ async function renderFavoritesPage() {
 
     const loadMoreTile = document.getElementById("load-more-tile");
     tickerTrack.querySelectorAll(".stock-tile:not(#load-more-tile)").forEach(tile => tile.remove());
+    loadMoreTile.querySelector(".load-more-main").textContent = "\u66f4\u65b0\u4e2d";
+    loadMoreTile.querySelector(".load-more-sub").textContent = "\u304a\u6c17\u306b\u5165\u308a\u306e\u524d\u65e5\u6bd4\u3092\u78ba\u8a8d\u3057\u3066\u3044\u307e\u3059";
 
-    const favorites = getFavorites();
+    const favorites = await refreshFavoriteCards();
     favorites.forEach((stock, index) => {
         const tile = createStockTile(stock, index + 1, "favorites");
         tickerTrack.insertBefore(tile, loadMoreTile);

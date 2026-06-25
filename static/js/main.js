@@ -13,7 +13,15 @@ function getRefreshStorageKey(ranking) {
 
 
 function getOtherRanking(ranking) {
-    return ranking === "dividend" ? "up" : "dividend";
+    if (ranking === "up") {
+        return "dividend";
+    }
+
+    if (ranking === "dividend") {
+        return "up";
+    }
+
+    return null;
 }
 
 
@@ -49,7 +57,7 @@ function buildRankingUrl(ranking, forceRefresh) {
 function setupHourlyRankingRefresh() {
     const currentRanking = getCurrentRanking();
 
-    if (currentRanking === "favorites" || currentRanking === "search") {
+    if (!getOtherRanking(currentRanking) || currentRanking === "favorites" || currentRanking === "search") {
         return;
     }
 
@@ -57,7 +65,7 @@ function setupHourlyRankingRefresh() {
 
     setInterval(() => {
         const nextRanking = getOtherRanking(getCurrentRanking());
-        if (nextRanking === "favorites") {
+        if (!nextRanking) {
             return;
         }
 
