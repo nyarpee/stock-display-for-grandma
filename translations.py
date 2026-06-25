@@ -319,3 +319,19 @@ FINANCIAL_LABELS.update({
     # 未払費用
     "Change In Accrued Expense": "未払費用の増減",
 })
+
+
+FINANCIAL_LABELS.update({
+    "Common Stock Dividend Paid": "\u666e\u901a\u682a\u5f0f\u914d\u5f53\u652f\u6255",
+    "Gain Loss On Sale Of PPE": "\u6709\u5f62\u56fa\u5b9a\u8cc7\u7523\u58f2\u5374\u640d\u76ca",
+    "Short Term Debt Issuance": "\u77ed\u671f\u501f\u5165\u91d1\u306e\u8abf\u9054",
+    "Short Term Debt Payments": "\u77ed\u671f\u501f\u5165\u91d1\u306e\u8fd4\u6e08",
+    "Restructuring And Mergern Acquisition": "\u4e8b\u696d\u518d\u7de8\u30fbM&A\u8cbb\u7528",
+    "General And Administrative Expense": "\u4e00\u822c\u7ba1\u7406\u8cbb",
+    "Research And Development": "\u7814\u7a76\u958b\u767a\u8cbb",
+    "Other Investments": "\u305d\u306e\u4ed6\u6295\u8cc7",
+    "Other Short Term Investments": "\u305d\u306e\u4ed6\u77ed\u671f\u6295\u8cc7",
+    "Taxes Receivable": "\u672a\u53ce\u7a0e\u91d1",
+    "Tradeand Other Payables Non Current": "\u9577\u671f\u55b6\u696d\u50b5\u52d9\u53ca\u3073\u305d\u306e\u4ed6\u50b5\u52d9",
+    "Non Current Prepaid Assets": "\u9577\u671f\u524d\u6255\u8cc7\u7523",
+})

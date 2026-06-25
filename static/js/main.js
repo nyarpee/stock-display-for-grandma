@@ -47,10 +47,20 @@ function buildRankingUrl(ranking, forceRefresh) {
 
 
 function setupHourlyRankingRefresh() {
-    markRankingRefreshed(getCurrentRanking());
+    const currentRanking = getCurrentRanking();
+
+    if (currentRanking === "favorites" || currentRanking === "search") {
+        return;
+    }
+
+    markRankingRefreshed(currentRanking);
 
     setInterval(() => {
         const nextRanking = getOtherRanking(getCurrentRanking());
+        if (nextRanking === "favorites") {
+            return;
+        }
+
         window.location.href = buildRankingUrl(nextRanking, true);
     }, RANKING_REFRESH_MS);
 }

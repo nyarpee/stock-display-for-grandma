@@ -1,7 +1,16 @@
-<div class="stock-tile" onclick="openDetail('{{ stock.code }}')">
+<div class="stock-tile"
+     data-code="{{ stock.code }}"
+     data-name="{{ stock.name }}"
+     data-price="{{ stock.price }}"
+     data-change="{{ stock.change }}"
+     data-dividend-yield="{{ stock.dividend_yield }}"
+     onclick="openDetailFromTile(this)">
     <div class="tile-top">
         <span class="rank">#{{ rank }}</span>
-        <span class="code">{{ stock.code }}</span>
+        <div class="tile-actions">
+            <span class="code">{{ stock.code }}</span>
+            <button class="favorite-button" type="button" aria-label="&#12362;&#27671;&#12395;&#20837;&#12426;" onclick="toggleFavoriteFromTile(event, this.closest('.stock-tile'))">&#9734;</button>
+        </div>
     </div>
 
     <div class="name">{{ stock.name }}</div>
@@ -25,7 +34,7 @@
             </p>
         </div>
 
-        <div class="change">
+        <div class="change {% if stock.change and stock.change|string|trim|first == '-' %}down-text{% else %}up-text{% endif %}">
             {% if ranking == "dividend" %}
                 {{ stock.price }}&#20870;
             {% else %}

@@ -1,6 +1,9 @@
 import time
+from datetime import datetime
 
+import requests
 import yfinance as yf
+from bs4 import BeautifulSoup
 
 from profile import get_company_profile
 from services.chart_service import get_price_charts
@@ -9,6 +12,94 @@ from utils.formatters import safe_dict, safe_get, safe_number, safe_series
 
 
 stock_cache = TimedCache()
+stock_card_cache = TimedCache()
+
+
+def calculate_dividend_yield(dividend_rate, current_price):
+    dividend_rate = safe_number(dividend_rate)
+    current_price = safe_number(current_price)
+
+    if dividend_rate is None or current_price is None or current_price == 0:
+        return None
+
+    return dividend_rate / current_price
+
+
+def format_date_value(value):
+    if value is None or value == "":
+        return None
+
+    try:
+        timestamp = float(value)
+        if timestamp <= 0:
+            return None
+
+        date = datetime.fromtimestamp(timestamp)
+        return f"{date.year}年{date.month}月{date.day}日"
+    except Exception:
+        return str(value)
+
+
+def get_japanese_stock_name(code):
+    try:
+        url = f"https://finance.yahoo.co.jp/quote/{code}.T"
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "lxml")
+        title = soup.select_one("h1")
+
+        if title:
+            name = title.get_text(" ", strip=True).replace(f"({code}.T)", "").strip()
+            if name:
+                return name
+    except Exception:
+        return ""
+
+    return ""
+
+
+def get_stock_card(code):
+    now = time.time()
+    cached = stock_card_cache.get(code, now)
+
+    if cached:
+        return cached
+
+    symbol = f"{code}.T"
+    ticker = yf.Ticker(symbol)
+    info = ticker.info
+    fast = ticker.fast_info
+    last_price = safe_number(safe_get(fast, "lastPrice"))
+    previous_close = safe_number(safe_get(fast, "previousClose"))
+    price_change = None
+    price_change_percent = None
+
+    if last_price is not None and previous_close is not None:
+        price_change = last_price - previous_close
+
+        if previous_close:
+            price_change_percent = price_change / previous_close * 100
+
+    name = get_japanese_stock_name(code) or info.get("longName") or info.get("shortName") or code
+    change = ""
+
+    if price_change is not None:
+        change = f"{price_change:+,.0f}円"
+
+        if price_change_percent is not None:
+            change = f"{change} / {price_change_percent:+.2f}%"
+
+    data = {
+        "name": name,
+        "code": code,
+        "price": f"{last_price:,.0f}" if last_price is not None else "",
+        "change": change or "前日比不明",
+        "dividend_yield": "",
+        "kind": "search",
+    }
+
+    stock_card_cache.set(code, now, data)
+    return data
 
 
 def get_stock_detail(code):
@@ -25,6 +116,8 @@ def get_stock_detail(code):
     profile = get_company_profile(code)
     last_price = safe_number(safe_get(fast, "lastPrice"))
     previous_close = safe_number(safe_get(fast, "previousClose"))
+    dividend_rate = safe_number(info.get("dividendRate"))
+    dividend_yield = calculate_dividend_yield(dividend_rate, last_price)
     price_change = None
     price_change_percent = None
 
@@ -38,7 +131,7 @@ def get_stock_detail(code):
         "code": code,
         "symbol": symbol,
         "summary": {
-            "name": info.get("longName") or info.get("shortName") or code,
+            "name": get_japanese_stock_name(code) or info.get("longName") or info.get("shortName") or code,
             "code": code,
             "symbol": symbol,
             "current_price": last_price,
@@ -47,68 +140,66 @@ def get_stock_detail(code):
             "change_percent": price_change_percent,
         },
         "basic": {
-            "\u83a8\u592c\uff64\uff7e\u8711\uff65": info.get("longName") or info.get("shortName"),
-            "\u9a6b\u4ff6\u6c1b\u7e67\uff73\u7e5d\uff7c\u7e5d\uff65": code,
-            "\u87f6\u3087\uf8f0\uff74": profile.get("\u87f6\u3087\uf8f0\uff74\u8711\uff65") or info.get("exchange"),
-            "\u8b8c\uff6d\u905e\uff6e": profile.get("\u8b8c\uff6d\u905e\uff6e\u86fb\uff65\uff61\uff65") or info.get("industry"),
-            "\u8b5b\uff6c\u9068\uff7e\u8b07\u0080\u8768\uff68\u8768\uff70": profile.get("\u8b5b\uff6c\u9068\uff7e\u8b07\u0080\u8768\uff68\u8768\uff70"),
-            "\u8389\uff63\u9666\uff68\u95a0\uff65\u9310": profile.get("\u8389\uff63\u9666\uff68\u95a0\uff65\u9310"),
-            "\u96aa\uff6d\u9076\u53e5\uff74\uff8e\u8b5b\u57df\u5f8b": profile.get("\u96aa\uff6d\u9076\u53e5\uff74\uff8e\u8b5b\u57df\u5f8b"),
-            "\u8373\u96c1\uf8f0\uff74\u87f7\uff74\u8b5b\u57df\u5f8b": profile.get("\u8373\u96c1\uf8f0\uff74\u87f7\uff74\u8b5b\u57df\u5f8b"),
-            "\u8c4e\uff7a\u9082\uff65": profile.get("\u8c4e\uff7a\u9082\uff65"),
-            "\u870a\u4f05\uff65\u8b5c\uff6a\u8b28\uff70": profile.get("\u870a\u4f05\uff65\u8b5c\uff6a\u8b28\uff70"),
-            "\u8815\u637a\uff65\uff6d\u8709\uff61\u8b28\uff70\uff65\u4ea5\u8170\u8fe2\uff6c\uff65\uff65": profile.get("\u8815\u637a\uff65\uff6d\u8709\uff61\u8b28\uff70\uff65\u4ea5\u8170\u8fe2\uff6c\uff65\uff65"),
-            "\u8815\u637a\uff65\uff6d\u8709\uff61\u8b28\uff70\uff65\u78ef\u0080\uff63\u90a8\u64b0\uff7c\uff65": profile.get("\u8815\u637a\uff65\uff6d\u8709\uff61\u8b28\uff70\uff65\u78ef\u0080\uff63\u90a8\u64b0\uff7c\uff65"),
-            "\u87f7\uff73\u876e\uff65\uff79\uff74\u9bae\uff62": profile.get("\u87f7\uff73\u876e\uff65\uff79\uff74\u9bae\uff62"),
-            "\u87f7\uff73\u876e\uff65\uff79\uff74\u8700\uff65": profile.get("\u87f7\uff73\u876e\uff65\uff79\uff74\u8700\uff65"),
-            "\u95cd\uff71\u8b41\uff65\uff64\uff7e\u8711\uff65": profile.get("\u95cd\uff71\u8b41\uff65\uff64\uff7e\u8711\uff65"),
-            "Web\u7e67\uff75\u7e67\uff64\u7e5d\uff65": info.get("website"),
+            "会社名": get_japanese_stock_name(code) or info.get("longName") or info.get("shortName"),
+            "銘柄コード": code,
+            "市場": profile.get("\u87f6\u3087\uf8f0\uff74\u8711\uff65") or info.get("exchange"),
+            "業種": profile.get("\u8b8c\uff6d\u905e\uff6e\u86fb\uff65\uff61\uff65") or info.get("industry"),
+            "特色": profile.get("\u8b5b\uff6c\u9068\uff7e\u8b07\u0080\u8768\uff68\u8768\uff70"),
+            "本社所在地": profile.get("\u8389\uff63\u9666\uff68\u95a0\uff65\u9310"),
+            "代表者": profile.get("\u96aa\uff6d\u9076\u53e5\uff74\uff8e\u8b5b\u57df\u5f8b"),
+            "設立年月日": profile.get("\u8373\u96c1\uf8f0\uff74\u87f7\uff74\u8b5b\u57df\u5f8b"),
+            "上場年月日": profile.get("\u8c4e\uff7a\u9082\uff65"),
+            "決算": profile.get("\u870a\u4f05\uff65\u8b5c\uff6a\u8b28\uff70"),
+            "単元株数": profile.get("\u8815\u637a\uff65\uff6d\u8709\uff61\u8b28\uff70\uff65\u4ea5\u8170\u8fe2\uff6c\uff65\uff65"),
+            "従業員数": profile.get("\u8815\u637a\uff65\uff6d\u8709\uff61\u8b28\uff70\uff65\u78ef\u0080\uff63\u90a8\u64b0\uff7c\uff65"),
+            "平均年齢": profile.get("\u87f7\uff73\u876e\uff65\uff79\uff74\u9bae\uff62"),
+            "平均年収": profile.get("\u87f7\uff73\u876e\uff65\uff79\uff74\u8700\uff65"),
+            "Webサイト": info.get("website"),
         },
         "profile_text": {
-            "\u8ffa\uff79\u6ff6\uff72": profile.get("\u8ffa\uff79\u6ff6\uff72"),
-            "\u9a3e\uff63\u90a8\u8749\uff7a\u533a\uff65\uff6d": profile.get("\u9a3e\uff63\u90a8\u8749\uff7a\u533a\uff65\uff6d"),
+            "特色": profile.get("\u8ffa\uff79\u6ff6\uff72"),
+            "関連事業": profile.get("\u9a3e\uff63\u90a8\u8749\uff7a\u533a\uff65\uff6d"),
         },
         "price": {
-            "\u8fc4\uff7e\u8768\uff68\u86df\uff64": safe_get(fast, "lastPrice"),
-            "\u8708\u80b4\u5f8b\u90a8\u3087\u0080\uff64": safe_get(fast, "previousClose"),
-            "\u87cb\u53e5\u0080\uff64": safe_get(fast, "open"),
-            "\u9b2e\u4f05\u0080\uff64": safe_get(fast, "dayHigh"),
-            "\u87b3\u7259\u0080\uff64": safe_get(fast, "dayLow"),
-            "\u8703\uff7a\u8b5a\uff65\u9b2e\uff65": safe_get(fast, "lastVolume"),
-            "\u8b56\u3086\uff7e\uff61\u90b1\u57ce\uff61\uff65": info.get("marketCap"),
-            "52\u9a3e\uff71\u9b2e\u4f05\u0080\uff64": info.get("fiftyTwoWeekHigh"),
-            "52\u9a3e\uff71\u87b3\u7259\u0080\uff64": info.get("fiftyTwoWeekLow"),
+            "現在値": safe_get(fast, "lastPrice"),
+            "前日終値": safe_get(fast, "previousClose"),
+            "始値": safe_get(fast, "open"),
+            "高値": safe_get(fast, "dayHigh"),
+            "安値": safe_get(fast, "dayLow"),
+            "出来高": safe_get(fast, "lastVolume"),
+            "時価総額": info.get("marketCap"),
+            "52週高値": info.get("fiftyTwoWeekHigh"),
+            "52週安値": info.get("fiftyTwoWeekLow"),
         },
         "valuation": {
             "PER": info.get("trailingPE"),
-            "\u8385\u57df\u03a6PER": info.get("forwardPE"),
+            "予想PER": info.get("forwardPE"),
             "PBR": info.get("priceToBook"),
             "EPS": info.get("trailingEps"),
-            "\u8385\u57df\u03a6EPS": info.get("forwardEps"),
+            "予想EPS": info.get("forwardEps"),
             "ROE": info.get("returnOnEquity"),
             "ROA": info.get("returnOnAssets"),
         },
         "dividend": {
-            "\u9a5f\u698a\uff7d\u707d\u831c\u8757\u69ed\uff6a": info.get("dividendYield"),
-            "\u87f7\uff74\u9aea\u99b4\uff65\u8816\uff65": info.get("dividendRate"),
-            "\u9a5f\u698a\uff7d\u637a\u0080\uff67\u8711\uff65": info.get("payoutRatio"),
-            "\u9036\uff74\u9711\u9df9\uff65\u8816\u637a\u5f8b": str(info.get("exDividendDate")),
+            "配当利回り": dividend_yield,
+            "年間配当": dividend_rate,
+            "配当性向": info.get("payoutRatio"),
+            "権利落ち日": format_date_value(info.get("exDividendDate")),
         },
         "financials": {
-            "\u87a2\uff72\u8373\u4f01\uff6b\uff65": info.get("totalRevenue"),
-            "\u87a2\uff72\u8373\u9854\uff77\u4e1e\u831c\u9036\uff65": info.get("grossProfits"),
-            "\u875f\uff76\u8b8c\uff6d\u86fb\uff69\u9036\uff65": info.get("operatingIncome"),
-            "\u908f\u6ccc\u831c\u9036\uff65": info.get("netIncomeToCommon"),
-            "\u90b1\u5270\uff73\uff65\u809d": info.get("totalAssets"),
-            "\u90b1\u5270\uff72\uf8f0\u86ef\uff75": info.get("totalDebt"),
-            "\u875f\uff76\u8b8c\uff6dCF": info.get("operatingCashflow"),
-            "\u7e5d\u8f14\u039c\u7e5d\uff7cCF": info.get("freeCashflow"),
+            "売上高": info.get("totalRevenue"),
+            "売上総利益": info.get("grossProfits"),
+            "営業利益": info.get("operatingIncome"),
+            "純利益": info.get("netIncomeToCommon"),
+            "総資産": info.get("totalAssets"),
+            "有利子負債": info.get("totalDebt"),
+            "営業キャッシュフロー": info.get("operatingCashflow"),
+            "フリーキャッシュフロー": info.get("freeCashflow"),
         },
         "charts": get_price_charts(ticker),
         "statements": {
             "\u8b33\u54b2\u5be2\u96aa\u80b2\uff6e\u73b2\u5d8c": safe_dict(ticker.financials),
             "\u96cb\uff78\u86df\u6eb7\uff6f\uff7e\u8fa3\uff67\u9666\uff68": safe_dict(ticker.balance_sheet),
-            "\u7e67\uff6d\u7e5d\uff63\u7e5d\uff65\u3059\u7e5d\uff65\u7e5d\u8f14\u039f\u7e5d\uff7c": safe_dict(ticker.cashflow),
             "\u9a5f\u698a\uff7d\u707d\uff71\uff65\u8c41\uff74": safe_series(ticker.dividends),
             "\u8b5c\uff6a\u8811\u4e1e\uff65\u8708\uff72\u87bb\uff65\u8c41\uff74": safe_series(ticker.splits),
         },
