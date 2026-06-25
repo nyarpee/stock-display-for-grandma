@@ -17,8 +17,8 @@ body {
 :root {
     --header-height: 220px;
     --tile-gap: 22px;
-    --tile-width: clamp(300px, 34vw, 420px);
-    --tile-height: clamp(190px, calc((100vh - var(--header-height) - 72px) / 2), 270px);
+    --tile-width: clamp(340px, 38vw, 520px);
+    --tile-height: clamp(220px, calc((100vh - var(--header-height) - 72px) / 2), 360px);
     --ticker-side-padding: clamp(28px, 5vw, 72px);
 }
 
