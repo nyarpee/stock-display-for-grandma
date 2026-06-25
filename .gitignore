@@ -33,6 +33,7 @@ Thumbs.db
 
 # Local data cache
 data/cache/
+data/*.sqlite3
 
 # Agents
 .agents/

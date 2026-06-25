@@ -1,7 +1,33 @@
 const FAVORITES_STORAGE_KEY = "stock-display-favorites-v1";
 
+let favoriteStocks = [];
+let favoritesReady = null;
 
-function getFavorites() {
+
+function normalizeFavoriteStock(stock) {
+    return {
+        code: String(stock?.code || "").trim(),
+        name: String(stock?.name || stock?.code || "").trim(),
+        price: String(stock?.price ?? "").trim(),
+        change: String(stock?.change ?? "").trim(),
+        dividend_yield: String(stock?.dividend_yield ?? stock?.dividendYield ?? "").trim(),
+    };
+}
+
+
+async function fetchFavorites() {
+    const response = await fetch("/api/favorites");
+
+    if (!response.ok) {
+        throw new Error("\u304a\u6c17\u306b\u5165\u308a\u3092\u53d6\u5f97\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f");
+    }
+
+    favoriteStocks = await response.json();
+    return favoriteStocks;
+}
+
+
+function getLegacyFavorites() {
     try {
         const favorites = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
         return Array.isArray(favorites) ? favorites.filter(stock => stock && stock.code) : [];
@@ -11,45 +37,98 @@ function getFavorites() {
 }
 
 
-function saveFavorites(favorites) {
-    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+async function migrateLegacyFavorites() {
+    const legacyFavorites = getLegacyFavorites();
+
+    if (legacyFavorites.length === 0) {
+        return;
+    }
+
+    await Promise.all(legacyFavorites.map(stock => saveFavoriteToServer(stock)));
+    localStorage.removeItem(FAVORITES_STORAGE_KEY);
 }
 
 
-function normalizeFavoriteStock(stock) {
-    return {
-        code: String(stock.code || "").trim(),
-        name: String(stock.name || stock.code || "").trim(),
-        price: String(stock.price ?? "").trim(),
-        change: String(stock.change ?? "").trim(),
-        dividend_yield: String(stock.dividend_yield ?? stock.dividendYield ?? "").trim(),
-    };
+async function loadFavorites() {
+    await migrateLegacyFavorites();
+    return fetchFavorites();
+}
+
+
+function ensureFavoritesReady() {
+    if (!favoritesReady) {
+        favoritesReady = loadFavorites().catch(error => {
+            console.error(error);
+            favoriteStocks = [];
+            return favoriteStocks;
+        });
+    }
+
+    return favoritesReady;
+}
+
+
+function getFavorites() {
+    return favoriteStocks;
 }
 
 
 function isFavorite(code) {
     const normalizedCode = String(code || "").trim();
-    return getFavorites().some(stock => stock.code === normalizedCode);
+    return favoriteStocks.some(stock => stock.code === normalizedCode);
 }
 
 
-function toggleFavorite(stock) {
+async function saveFavoriteToServer(stock) {
+    const favorite = normalizeFavoriteStock(stock);
+
+    if (!favorite.code) {
+        return null;
+    }
+
+    const response = await fetch("/api/favorites", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(favorite),
+    });
+
+    if (!response.ok) {
+        throw new Error("\u304a\u6c17\u306b\u5165\u308a\u306b\u4fdd\u5b58\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f");
+    }
+
+    return response.json();
+}
+
+
+async function deleteFavoriteFromServer(code) {
+    const response = await fetch(`/api/favorites/${encodeURIComponent(code)}`, {
+        method: "DELETE",
+    });
+
+    if (!response.ok) {
+        throw new Error("\u304a\u6c17\u306b\u5165\u308a\u3092\u5916\u305b\u307e\u305b\u3093\u3067\u3057\u305f");
+    }
+}
+
+
+async function toggleFavorite(stock) {
+    await ensureFavoritesReady();
+
     const favorite = normalizeFavoriteStock(stock);
     if (!favorite.code) {
         return false;
     }
 
-    const favorites = getFavorites();
-    const existingIndex = favorites.findIndex(item => item.code === favorite.code);
-
-    if (existingIndex >= 0) {
-        favorites.splice(existingIndex, 1);
-        saveFavorites(favorites);
+    if (isFavorite(favorite.code)) {
+        await deleteFavoriteFromServer(favorite.code);
+        favoriteStocks = favoriteStocks.filter(item => item.code !== favorite.code);
         return false;
     }
 
-    favorites.push(favorite);
-    saveFavorites(favorites);
+    const savedFavorite = await saveFavoriteToServer(favorite);
+    favoriteStocks.push(savedFavorite || favorite);
     return true;
 }
 
@@ -65,9 +144,9 @@ function getStockFromTile(tile) {
 }
 
 
-function toggleFavoriteFromTile(event, tile) {
+async function toggleFavoriteFromTile(event, tile) {
     event.stopPropagation();
-    toggleFavorite(getStockFromTile(tile));
+    await toggleFavorite(getStockFromTile(tile));
     refreshFavoriteButtons();
 
     if (getCurrentRanking() === "favorites") {
@@ -76,9 +155,9 @@ function toggleFavoriteFromTile(event, tile) {
 }
 
 
-function toggleFavoriteFromCurrentDetail(event) {
+async function toggleFavoriteFromCurrentDetail(event) {
     event.stopPropagation();
-    toggleFavorite(window.currentDetailFavoriteStock || {});
+    await toggleFavorite(window.currentDetailFavoriteStock || {});
     refreshFavoriteButtons();
 
     if (getCurrentRanking() === "favorites") {
@@ -123,10 +202,12 @@ function setFavoritesEmptyTile(loadMoreTile, hasFavorites) {
 }
 
 
-function renderFavoritesPage() {
-    if (getCurrentRanking() !== "favorites") {
+async function renderFavoritesPage() {
+    if (getCurrentRanking() !== "favorites" || !tickerTrack) {
         return;
     }
+
+    await ensureFavoritesReady();
 
     const loadMoreTile = document.getElementById("load-more-tile");
     tickerTrack.querySelectorAll(".stock-tile:not(#load-more-tile)").forEach(tile => tile.remove());
@@ -145,7 +226,9 @@ function renderFavoritesPage() {
 }
 
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await ensureFavoritesReady();
+
     if (getCurrentRanking() === "favorites") {
         renderFavoritesPage();
         return;

@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, render_template, request
 
+from services.favorite_service import delete_favorite, list_favorites, save_favorite
 from services.ranking_service import get_japan_ranking
 from services.stock_service import get_stock_card, get_stock_detail
 
@@ -38,3 +39,23 @@ def stock_detail_api(code):
 @stocks_bp.route("/api/stock-card/<code>")
 def stock_card_api(code):
     return jsonify(get_stock_card(code))
+
+
+@stocks_bp.route("/api/favorites")
+def favorites_api():
+    return jsonify(list_favorites())
+
+
+@stocks_bp.route("/api/favorites", methods=["POST"])
+def add_favorite_api():
+    try:
+        favorite = save_favorite(request.get_json(silent=True) or {})
+        return jsonify(favorite)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@stocks_bp.route("/api/favorites/<code>", methods=["DELETE"])
+def delete_favorite_api(code):
+    delete_favorite(code)
+    return jsonify({"ok": True})
