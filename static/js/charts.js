@@ -11,6 +11,8 @@ const chartMetrics = {
     labelY: 296,
 };
 
+const chartRangeOrder = ["1d", "1w", "1m", "6m", "1y"];
+
 
 function renderChartSection(charts) {
     const activeRange = getInitialChartRange(charts);
@@ -29,7 +31,7 @@ function renderChartSection(charts) {
             <div class="chart-heading">
                 <h3>\u5024\u52d5\u304d</h3>
                 <div class="chart-tabs">
-                    ${Object.entries(charts).map(([range, chart]) => `
+                    ${getOrderedChartEntries(charts).map(([range, chart]) => `
                         <button
                             class="chart-tab ${range === activeRange ? "active" : ""}"
                             type="button"
@@ -49,8 +51,14 @@ function renderChartSection(charts) {
 
 
 function getInitialChartRange(charts) {
-    const preferred = ["1d", "1w", "1m", "6m", "1y"];
-    return preferred.find(range => charts?.[range]?.points?.length > 1) || "";
+    return chartRangeOrder.find(range => charts?.[range]?.points?.length > 1) || "";
+}
+
+
+function getOrderedChartEntries(charts) {
+    return chartRangeOrder
+        .filter(range => charts?.[range])
+        .map(range => [range, charts[range]]);
 }
 
 
