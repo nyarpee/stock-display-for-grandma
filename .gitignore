@@ -33,6 +33,7 @@ Thumbs.db
 
 # Local data cache
 data/cache/
+data/yfinance-cache/
 data/*.sqlite3
 
 # Agents
