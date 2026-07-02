@@ -79,6 +79,9 @@ async function openDetail(code, preferredName = "", preferredDividendYield = "")
         if (typeof refreshFavoriteButtons === "function") {
             refreshFavoriteButtons();
         }
+        if (typeof recordFavoriteOpen === "function") {
+            recordFavoriteOpen(window.currentDetailFavoriteStock.code);
+        }
     } catch (error) {
         document.getElementById("detail-title").textContent = "\u53d6\u5f97\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f";
         content.innerHTML = `<p class="detail-summary">${error.message}</p>`;

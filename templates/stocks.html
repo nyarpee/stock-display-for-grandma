@@ -14,6 +14,8 @@
         <h1>
             {% if ranking == "search" %}
                 &#37528;&#26564;&#12467;&#12540;&#12489;&#26908;&#32034;
+            {% elif ranking == "japan" %}
+                &#26085;&#32076;&#24179;&#22343;
             {% elif ranking == "favorites" %}
                 &#12362;&#27671;&#12395;&#20837;&#12426;
             {% elif ranking == "attention" %}
@@ -30,6 +32,10 @@
         </h1>
 
         <div class="ranking-tabs">
+            <a class="ranking-tab market-ranking-tab {% if ranking == 'japan' %}active{% endif %}" href="/?ranking=japan">
+                &#26085;&#32076;&#24179;&#22343;
+            </a>
+
             <a class="ranking-tab {% if ranking == 'up' %}active{% endif %}" href="/?ranking=up">
                 &#20516;&#19978;&#12364;&#12426;
             </a>
@@ -66,7 +72,41 @@
     </div>
 </header>
 
-{% if ranking == "search" %}
+{% if ranking == "japan" %}
+<main class="market-dashboard">
+    <section class="market-summary">
+        <div>
+            <p class="market-label">&#26085;&#26412;&#24066;&#22580;&#12398;&#30446;&#23433;</p>
+            <h2>{{ market_overview.main.name if market_overview and market_overview.main else "日経平均" }}</h2>
+        </div>
+        <div class="market-main-value {{ market_overview.main.direction if market_overview and market_overview.main else 'up' }}">
+            <strong>{{ market_overview.main.price if market_overview and market_overview.main and market_overview.main.price else "取得中" }}</strong>
+            <span>
+                {% if market_overview and market_overview.main and market_overview.main.change_percent %}
+                    {{ market_overview.main.change }} / {{ market_overview.main.change_percent }}
+                {% else %}
+                    &#21069;&#26085;&#27604;&#19981;&#26126;
+                {% endif %}
+            </span>
+        </div>
+    </section>
+
+    <section class="market-index-grid">
+        {% for item in market_overview.indexes if market_overview %}
+            <div class="market-index-card {{ item.direction }}">
+                <p>{{ item.name }}</p>
+                <strong>{{ item.price if item.price else "不明" }}</strong>
+                <span>{{ item.change_percent if item.change_percent else "前日比不明" }}</span>
+            </div>
+        {% endfor %}
+    </section>
+
+    <div id="market-chart-root"></div>
+</main>
+<script>
+    window.marketOverview = {{ market_overview|tojson }};
+</script>
+{% elif ranking == "search" %}
 <main class="code-search">
     <section class="search-pad" aria-label="&#37528;&#26564;&#12467;&#12540;&#12489;&#20837;&#21147;">
         <p class="search-label">&#37528;&#26564;&#12467;&#12540;&#12489;&#12434;&#20837;&#21147;</p>
@@ -133,4 +173,5 @@
 <script src="/static/js/detail.js"></script>
 <script src="/static/js/favorites.js"></script>
 <script src="/static/js/search.js"></script>
+<script src="/static/js/market.js"></script>
 {% endblock %}

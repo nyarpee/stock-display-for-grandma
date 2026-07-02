@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, render_template, request
 
-from services.favorite_service import delete_favorite, list_favorites, save_favorite
+from services.favorite_service import delete_favorite, list_favorites, record_favorite_open, save_favorite
+from services.market_service import get_japan_market_overview
 from services.ranking_service import get_japan_ranking
 from services.stock_service import get_stock_card, get_stock_detail
 
@@ -11,15 +12,16 @@ stocks_bp = Blueprint("stocks", __name__)
 @stocks_bp.route("/")
 def index():
     kind = request.args.get("ranking", "up")
-    stocks = [] if kind in ("favorites", "search") else get_japan_ranking(kind=kind, limit=10)
+    stocks = [] if kind in ("favorites", "search", "japan") else get_japan_ranking(kind=kind, limit=10)
+    market_overview = get_japan_market_overview() if kind == "japan" else None
 
-    return render_template("stocks.html", stocks=stocks, ranking=kind)
+    return render_template("stocks.html", stocks=stocks, ranking=kind, market_overview=market_overview)
 
 
 @stocks_bp.route("/api/ranking")
 def ranking_api():
     kind = request.args.get("ranking", "up")
-    if kind in ("favorites", "search"):
+    if kind in ("favorites", "search", "japan"):
         return jsonify([])
 
     page = int(request.args.get("page", "1"))
@@ -46,6 +48,11 @@ def favorites_api():
     return jsonify(list_favorites())
 
 
+@stocks_bp.route("/api/japan-market")
+def japan_market_api():
+    return jsonify(get_japan_market_overview())
+
+
 @stocks_bp.route("/api/favorites", methods=["POST"])
 def add_favorite_api():
     try:
@@ -59,3 +66,8 @@ def add_favorite_api():
 def delete_favorite_api(code):
     delete_favorite(code)
     return jsonify({"ok": True})
+
+
+@stocks_bp.route("/api/favorites/<code>/open", methods=["POST"])
+def record_favorite_open_api(code):
+    return jsonify({"ok": record_favorite_open(code)})

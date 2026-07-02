@@ -81,7 +81,7 @@ function getFavorites() {
 
 
 function isFavorite(code) {
-    const normalizedCode = String(code || "").trim();
+    const normalizedCode = String(code || "").trim().toUpperCase();
     return favoriteStocks.some(stock => stock.code === normalizedCode);
 }
 
@@ -173,17 +173,46 @@ async function toggleFavoriteFromCurrentDetail(event) {
 }
 
 
+async function recordFavoriteOpen(code) {
+    const normalizedCode = String(code || "").trim().toUpperCase();
+
+    if (!normalizedCode || !isFavorite(normalizedCode)) {
+        return;
+    }
+
+    try {
+        await fetch(`/api/favorites/${encodeURIComponent(normalizedCode)}/open`, {
+            method: "POST",
+        });
+
+        favoriteStocks = favoriteStocks.map(stock => {
+            if (stock.code !== normalizedCode) {
+                return stock;
+            }
+
+            return {
+                ...stock,
+                open_count: Number(stock.open_count || 0) + 1,
+                last_opened_at: Date.now() / 1000,
+            };
+        });
+    } catch (_) {
+        // Opening detail should never fail because the usage counter could not be saved.
+    }
+}
+
+
 function refreshFavoriteButtons() {
     document.querySelectorAll(".stock-tile[data-code]").forEach(tile => {
         const button = tile.querySelector(".favorite-button");
-        if (!button) {
-            return;
-        }
-
         const active = isFavorite(tile.dataset.code);
-        button.classList.toggle("active", active);
-        button.textContent = active ? "\u2605" : "\u2606";
-        button.setAttribute("aria-pressed", active ? "true" : "false");
+        tile.classList.toggle("favorite-stock-tile", active);
+
+        if (button) {
+            button.classList.toggle("active", active);
+            button.textContent = active ? "\u2605" : "\u2606";
+            button.setAttribute("aria-pressed", active ? "true" : "false");
+        }
     });
 
     const detailButton = document.querySelector(".detail-favorite-button");
